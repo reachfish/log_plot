@@ -2,28 +2,7 @@
 #coding:utf-8
 
 import re
-import time as TIME
-import yy_common
-
-def get_time(log):
-	time_len = len("2018-01-16 10:25:11")
-	return log[0:time_len]
-
-def str2stamp(time):
-	m = re.match(r'(\d+)-(\d+)-(\d+) (\d+):(\d+):(\d+)', time)
-	if not m:
-		return 0
-	t = [ int(v) for v in m.groups() ]
-	t.append(0)
-	t.append(0)
-	t.append(0)
-
-	return TIME.mktime(t)
-
-def stamp2str(time):
-	return TIME.strftime("%Y-%m-%d %H:%M:%S", TIME.localtime(time))
-
-
+import yy_common as COMMON
 
 def count_thread_max(file_name):
 	print file_name
@@ -64,13 +43,12 @@ def count_thread_win(file_name):
 			if not m:
 				continue
 			name = m.group(1)
-			time_stamp = str2stamp(get_time(line))
+			time_stamp = COMMON.str2stamp(COMMON.get_time(line))
 			wakeup = int(m.group(3))
 			if not counter.get(name, None):
 				counter[name] = []
 
 			find = False
-			#elem = (time_stamp, wakeup, get_time(line))
 			elem = (time_stamp, wakeup,)
 			for one in counter[name]:
 				t = one[len(one)-1]
@@ -102,14 +80,14 @@ def count_thread_win(file_name):
 				total += v
 				time = k - window[0][0] + 32
 				if total >= limit * time and time >= win_size:
-					print int(total/time), name, stamp2str(window[0][0]), ' ~ ', stamp2str(k)
+					print int(total/time), name, COMMON.stamp2str(window[0][0]), ' ~ ', COMMON.stamp2str(k)
 					if end > 0 and k - end > 35:
-						#print total/time, name, stamp2str(begin), ' ~ ', stamp2str(end)
+						#print total/time, name, COMMON.stamp2str(begin), ' ~ ', COMMON.stamp2str(end)
 						begin = window[0][1]
 					end = k
 
 			#if total >= limit * time and time >= 300:
-			#		print total/time, name, stamp2str(window[0][0]), ' ~ ', stamp2str(end)
+			#		print total/time, name, COMMON.stamp2str(window[0][0]), ' ~ ', COMMON.stamp2str(end)
 
 cmds = {
 	"-max": count_thread_max,
@@ -128,7 +106,5 @@ usage:
 """
 
 if __name__ == "__main__":
-	yy_common.common_main(cmds, help_doc, 3)
-
-
+	COMMON.common_main(cmds, help_doc)
 
