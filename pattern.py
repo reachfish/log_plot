@@ -105,6 +105,22 @@ class PatternManager(object):
 
 		return results
 
+	def _find_patterns(self, fields):
+		exclude = []
+		patterns = []
+		for field in fields:
+			if not self._fields.get(field, None):
+				exclude.append(field)
+				continue
+			for pattern in self._fields[field]:
+				if not pattern in patterns:
+					patterns.append(pattern)
+
+		if exclude:
+			print '[Warning] No Field Pattern:', exclude
+
+		return [self._patterns[i] for i in patterns]
+
 	def _match_patterns(self, file_name, fields, patterns, begin_time, end_time, results):
 		t1 = base.Time(begin_time) if begin_time else None
 		t2 = base.Time(end_time) if end_time else None
@@ -126,7 +142,7 @@ class PatternManager(object):
 
 	def _put_field(self, field, _id, t, value, data):
 		if not data.get(_id, None):
-			data[_id] = ([],[],_id)
+			data[_id] = ([],[])
 		value = eval(value)
 		if type(value) == list:
 			data[_id][0].extend([(t - i + 1).get_datetime() for i in range(len(value), 0, -1)])
