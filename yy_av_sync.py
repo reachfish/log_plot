@@ -41,8 +41,11 @@ def video_rtt(file_name, pic_name):
 	print "###################"
 
 	patterns = (
-		# (r"read audio sync state\.\((\d+) decodeDelta (\d+) totalRtt:(\d+) playDelay:\d+ totalDelay:(\d+)", 
-			# (("decode_delta", 1, False), ("rtt", 2, False),("total_delay", 3, False)), 0),
+		# (r"read video sync state\.\((\d+) decodeDelta (\d+) totalRtt:(\d+) playDelay:\d+ totalDelay:(\d+)", 
+			# (("video_decode_delta", 1, False), ("video_rtt", 2, False),("video_total_delay", 3, False)), 0),
+
+		(r"read audio sync state\.\((\d+) decodeDelta (\d+) totalRtt:(\d+) playDelay:\d+ totalDelay:(\d+)", 
+			(("audio_decode_delta", 1, False), ("audio_rtt", 2, False),("audio_total_delay", 3, False)), 0),
 
 		# (r"read video sync state\.\((\d+) decodeDelta (\d+) totalRtt:(\d+) playDelay:\d+ totalDelay:(\d+)", 
 			# (("decode_delta", 1, False), ("rtt", 2, False),("total_delay", 3, False)), 0),
@@ -52,10 +55,13 @@ def video_rtt(file_name, pic_name):
 		# (r"\[videoJitter\] \d+ (\d+) normal in past.*total (\d+) \d+, distrb (\[[^\]]*\]) out: range.* total (\d+) \d+, distrb (\[[^\]]*\])",
 			# (("recv", 2, True),("pending", 4, True)), 0,
 			# ),
-
-		(r"myUid (\d+),.*rttAvg (\d+), rttMin (\d+), rttMax (\d+)",
-			(("rttAvg", 1, True),("rttMin", 2, True),("rttMax", 3, True)), 0,
+		(r"\[audioJitter\] \d+ (\d+) normal in past.*total (\d+) \d+, distrb (\[[^\]]*\]) out: range.* total (\d+) \d+, distrb (\[[^\]]*\])",
+			(("recv", 2, True),("pending", 4, True)), 0,
 			),
+
+		# (r"myUid (\d+),.*rttAvg (\d+), rttMin (\d+), rttMax (\d+)",
+			# (("rttAvg", 1, True),("rttMin", 2, True),("rttMax", 3, True)), 0,
+			# ),
 	)
 
 	begin_time = "2018-01-12 16:26:20"

@@ -140,7 +140,6 @@ def get_pattern_data(file_names, pattern_config, begin_time, end_time):
 	times = []
 	for file_name in file_names:
 		contents_, times_ = get_pattern(file_name, pattern, begin_time, end_time)
-		print contents_
 		contents.extend(contents_)
 		times.extend(times_)
 
@@ -185,11 +184,12 @@ def show_pattern_plot(log_names, save_name, patterns, begin_time=None, end_time=
 		all_datas.extend(datas)
 		all_names.extend(names)
 
-	if "decode_delta" in all_names:
-		data = all_datas[all_names.index("decode_delta")]
-		for i in range(len(data)):
-			d = data[i][1]
-			data[i][1] = [ v - min(d) + 1000 for v in d]
+	for i, name in enumerate(all_names):
+		if name.find("decode_delta") != -1:
+			data = all_datas[i]
+			for j in range(len(data)):
+				d = data[j][1]
+				data[j][1] = [ v - min(d) + 1000 for v in d]
 		# for i in range(1, len(data), 2):
 			# d = data[i]
 			# data[i] = [ v - min(d) + 1000 for v in d ]
