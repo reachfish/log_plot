@@ -31,13 +31,13 @@ class Time(object):
 		if not m:
 			return Time(0)
 
-		return Time(time_fmt.replace("(\d+)", "%d").format(*m.groups())
+		return Time("{0}-{1}-{2} {3}:{4}:{5}".format(*m.groups()))
 
 	def get_stamp(self):
 		return self._t
 
 	def get_str(self):
-		return time.strftime("%Y-%m-%d %H:%M:%S", TIME.localtime(self._t))
+		return time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(self._t))
 
 	def get_datetime(self):
 		return datetime.fromtimestamp(self._t)

@@ -11,9 +11,9 @@ class PreFilter(object):
 	def filter(self, field, value):
 		pass
 
-class Inc0Filter(PreFilter):
+class Excl0Filter(PreFilter):
 	def filter(self, field, value):
-		return value != 0 or field not in self._fields
+		return value == 0 and field in self._fields
 
 class PostProcesser(object):
 	def __init__(self, fields):
@@ -34,27 +34,33 @@ class StampPostProcesser(PostProcesser):
 
 class Pattern(object):
 	def __init__(self, pattern):
-		self._parse_raw_pattern(pattern)
+		lst = re.findall(r"\$\[?([\w\d_]+)\]?\$", pattern)
+		if lst:
+			self._fields = dict([ (v, i) for i, v in enumerate(lst, 1)])
+		elif pattern:
+			self._fields = {}
+			print "Pattern No Field", pattern
 
-	def _parse_raw_pattern(self, pattern):
-		self._fields = {}
-		word_regex = r"\$[\w\d_]+\$"
-		m = re.match(word_regex, pattern)
-		if not m:
-			return
+		pattern = self.parse_raw_pattern(pattern)
+		self._pattern = re.compile(pattern)
 
-		for i, v in enumerate(m.groups(), 1):
-			self._fields[v] = i
 
-		for c in "\\()[]{}+*?.":
+	def parse_raw_pattern(self, pattern):
+		tmp = "@@@@@" 
+		pattern = re.sub(r"\$\[[\w\d_]+\]\$", tmp, pattern)
+
+		for c in "\\()[]{}+?":
 			pattern = pattern.replace(c, "\\" + c)
 
-		self._pattern = re.subn(word_regex, "(\d+)", pattern)
+		pattern = re.sub(r"\$[\w\d_]+\$", "(\d+)", pattern)
+		pattern = re.sub(tmp, "(\[[^\]]+\])", pattern)
+
+		return pattern
 
 	def get_fields(self):
 		return self._fields
 
-	def match(content, fields):
+	def match(self, content, fields):
 		m = self._pattern.search(content)
 		if not m:
 			return
@@ -93,7 +99,7 @@ class PatternManager(object):
 	def add_post_processer(self, processer):
 		self._processers.append(processer)
 
-	def match(self, fields, file_names, begin_time, end_time):
+	def match(self, fields, file_names, filt, begin_time, end_time):
 		patterns = self._find_patterns(fields)
 		results = [{} for i in range(len(fields))]
 		for file_name in file_names:
@@ -136,7 +142,7 @@ class PatternManager(object):
 					if not result:
 						continue
 
-					_id = result.get("_id", "_id_") 
+					_id = result.get("_id", "$_id") 
 					for field, value in result.iteritems():
 						self._put_field(field, _id, t, value, results[field])
 
@@ -153,5 +159,4 @@ class PatternManager(object):
 					return
 			data[_id][0].append(t.get_datetime())
 			data[_id][1].append(value)
-
 
