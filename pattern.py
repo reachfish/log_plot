@@ -19,26 +19,26 @@ class PostProcesser(object):
 	def __init__(self, fields):
 		self._fields = fields
 
-	def process(self, field, data):
+	def process(self, results):
 		pass
 
 class StampPostProcesser(PostProcesser):
-	def process(self, field, data):
-		if field not in fields:
-			return
+	def process(self, results):
+		for field, datas in results.iteritems():
+			if field not in self._fields:
+				continue
 
-		for _id in data.keys():
-			d = data[_id]
-			data[_id] = [ v - min(d) + 1000 for v in d ]
+			for d in datas.itervalues():
+				d[1] = [ v - min(d[1]) + 1000 for v in d[1] ]
 
 
 class Pattern(object):
 	def __init__(self, pattern):
+		self._fields = {}
 		lst = re.findall(r"\$\[?([\w\d_]+)\]?\$", pattern)
 		if lst:
-			self._fields = dict([ (v, i) for i, v in enumerate(lst, 1)])
+			self._fields = dict([ (v, i) for i, v in enumerate(lst, 1) ])
 		elif pattern:
-			self._fields = {}
 			print "Pattern No Field", pattern
 
 		pattern = self.parse_raw_pattern(pattern)
@@ -52,8 +52,13 @@ class Pattern(object):
 		for c in "\\()[]{}+?":
 			pattern = pattern.replace(c, "\\" + c)
 
-		pattern = re.sub(r"\$[\w\d_]+\$", "(\d+)", pattern)
+		num_regex = "-?\d+"
+		pattern = re.sub(r"\$[\w\d_]+\$", "(%s)"%(num_regex,), pattern)
 		pattern = re.sub(tmp, "(\[[^\]]+\])", pattern)
+		pattern = re.sub(r"%d|%u|%hhu", num_regex, pattern)
+
+		for c in "$":
+			pattern = pattern.replace(c, "\\" + c)
 
 		return pattern
 
@@ -63,7 +68,7 @@ class Pattern(object):
 	def match(self, content, fields):
 		m = self._pattern.search(content)
 		if not m:
-			return
+			return None, None
 
 		result = {}
 		for field in fields:
@@ -71,7 +76,10 @@ class Pattern(object):
 			if index != None:
 				result[field] = m.group(index)
 
-		return result
+		_id_idx = self._fields.get("_id", None)
+		_id = m.group(_id_idx) if _id_idx else None
+
+		return result, _id
 
 class PatternManager(object):
 	__metaclass__ = base.Singleton 
@@ -87,11 +95,14 @@ class PatternManager(object):
 		for patt in patterns:
 			pattern = Pattern(patt)
 			self._patterns.append(pattern)
-			for field in patt.get_fields().keys():
+			for field in pattern.get_fields().keys():
 				if not self._fields.get(field, None):
 					self._fields[field] = []
 				self._fields[field].append(index)
 			index += 1
+
+	def get_fields(self):
+		return self._fields.keys()
 
 	def add_value_filter(self, filter):
 		self._filters.append(filter)
@@ -99,15 +110,16 @@ class PatternManager(object):
 	def add_post_processer(self, processer):
 		self._processers.append(processer)
 
-	def match(self, fields, file_names, filt, begin_time, end_time):
+	def match(self, fields, file_names, incl=None, begin_time=None, end_time=None):
+		if type(file_names) == str:
+			file_names = (file_names,)
 		patterns = self._find_patterns(fields)
-		results = [{} for i in range(len(fields))]
+		results = {}
 		for file_name in file_names:
-			self._match_patterns(file_name, fields, patterns, begin_time, end_time, results)
+			self._match_patterns(file_name, fields, patterns, incl, begin_time, end_time, results)
 
-		for processer in self.processer:
-			for field, data in results.iteritems():
-				processer.process(field, data)
+		for processer in self._processers:
+			processer.process(results)
 
 		return results
 
@@ -127,9 +139,10 @@ class PatternManager(object):
 
 		return [self._patterns[i] for i in patterns]
 
-	def _match_patterns(self, file_name, fields, patterns, begin_time, end_time, results):
+	def _match_patterns(self, file_name, fields, patterns, incl, begin_time, end_time, results):
 		t1 = base.Time(begin_time) if begin_time else None
 		t2 = base.Time(end_time) if end_time else None
+		pat = re.compile(incl) if incl else None
 		with open(file_name) as f:
 			for line in f:
 				t = base.Time.parse_time(line)
@@ -137,18 +150,24 @@ class PatternManager(object):
 					continue
 				if t2 and t > t2:
 					break
+				if pat and not pat.search(line):
+					continue
 				for pattern in patterns:
-					result = pattern.match(line, fields)
+					result, _id = pattern.match(line, fields)
 					if not result:
 						continue
 
-					_id = result.get("_id", "$_id") 
+					if _id is None:
+						_id = "$_id"
 					for field, value in result.iteritems():
-						self._put_field(field, _id, t, value, results[field])
+						self._put_field(field, _id, t, value, results)
 
-	def _put_field(self, field, _id, t, value, data):
+	def _put_field(self, field, _id, t, value, results):
+		if not results.get(field):
+			results[field] = {}
+		data = results[field]
 		if not data.get(_id, None):
-			data[_id] = ([],[])
+			data[_id] = [[],[]]
 		value = eval(value)
 		if type(value) == list:
 			data[_id][0].extend([(t - i + 1).get_datetime() for i in range(len(value), 0, -1)])
