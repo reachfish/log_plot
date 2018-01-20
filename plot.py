@@ -39,8 +39,9 @@ if __name__ == "__main__":
 	mgr.add_value_filter(pattern.Excl0Filter(config.exc_0_fields))
 	mgr.add_post_processer(pattern.StampPostProcesser(config.stamp_type_fields))
 
-
-	help_doc = """
+	
+	def help():
+		print """
 usage:
 
 log_file_name     out_pic_name     fields
@@ -49,15 +50,26 @@ log_file_name     out_pic_name     fields
 support fields:
 
 """
-	
-	if len(sys.argv) < 4:
-		print help_doc
 		print "  ".join(mgr.get_fields())
+		print ""
+		print "常用用法"
+		for i, fields in config.cases.iteritems():
+			print i, "  ".join(fields)
+
+	if len(sys.argv) < 4:
+		help()
 		exit()
 
 	log_file_names = sys.argv[1]
 	save_name = sys.argv[2]
 	fields = sys.argv[3:]
+	index = sys.argv[3]
+	if index.isdigit():
+		fields = config.cases.get(int(index), None)
+		if not fields:
+			help()
+			exit()
+
 	show_plot(fields, log_file_names, save_name)
 
 

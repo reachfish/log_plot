@@ -13,3 +13,7 @@ exc_0_fields = (
 stamp_type_fields = (
 	"video_decode_delta",
 )
+
+cases = {
+	1: ("video_rtt",  "video_decode_delta", "video_total_delay", "video_over_jitter"),
+}
