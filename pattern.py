@@ -4,6 +4,8 @@
 import re
 import base
 
+num_regex = "-?\d+"
+
 class PreFilter(object):
 	def __init__(self, fields):
 		self._fields = fields
@@ -52,10 +54,10 @@ class Pattern(object):
 		for c in "\\()[]{}+?":
 			pattern = pattern.replace(c, "\\" + c)
 
-		num_regex = "-?\d+"
 		pattern = re.sub(r"\$[\w\d_]+\$", "(%s)"%(num_regex,), pattern)
 		pattern = re.sub(tmp, "(\[[^\]]+\])", pattern)
 		pattern = re.sub(r"%d|%u|%hhu", num_regex, pattern)
+		#pattern = re.sub(r"%f", "-?\d+.\d+", pattern)
 
 		for c in "$":
 			pattern = pattern.replace(c, "\\" + c)

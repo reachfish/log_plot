@@ -27,7 +27,7 @@ class TestPattern(unittest.TestCase):
 			self.assertEqual(replace, pattern.Pattern("").parse_raw_pattern(raw))
 
 		test("[hello],(world)!Are You Ok?\\\\", "\\[hello\\],\\(world\\)!Are You Ok\\?\\\\\\\\")
-		test("streamId $_id$, video_rtt $video_rtt$ %d", "streamId (\d+), video_rtt (\d+) \d+")
+		test("streamId $_id$, video_rtt $video_rtt$ %d", "streamId ({0}), video_rtt ({0}) {0}".format(pattern.num_regex))
 		test("in $[recv]$, .* out $[pending]$", "in (\[[^\]]+\]), .* out (\[[^\]]+\])")
 
 		self.assertEqual({"_id":1, "video_rtt":2}, pattern.Pattern("streamId $_id$, video_rtt $video_rtt$ ").get_fields())

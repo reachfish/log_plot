@@ -8,6 +8,7 @@ if not os.getenv("DISPLAY", None):
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 import pattern
+import numpy
 
 def show_plot(fields, log_files, save_name, incl=None, begin_time=None, end_time=None):
 	mgr = pattern.PatternManager()
@@ -22,6 +23,8 @@ def show_plot(fields, log_files, save_name, incl=None, begin_time=None, end_time
 	fig.autofmt_xdate()
 	fig.set_size_inches(*inches)
 
+	if type(axes) != numpy.ndarray:
+		axes = (axes,)
 	for ax, (field, data) in zip(axes, results.items()):
 		ax.set_title(field)
 		ax.xaxis.set_major_formatter(mdates.DateFormatter('%H:%M:%S'))
