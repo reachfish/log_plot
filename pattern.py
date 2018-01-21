@@ -5,6 +5,7 @@ import re
 import base
 
 num_regex = "-?\d+"
+val_regex = "(%s|\[[^\]]+\])"%(num_regex,)
 
 class PreFilter(object):
 	def __init__(self, fields):
@@ -33,7 +34,6 @@ class StampPostProcesser(PostProcesser):
 			for d in datas.itervalues():
 				d[1] = [ v - min(d[1]) + 1000 for v in d[1] ]
 
-
 class Pattern(object):
 	def __init__(self, pattern):
 		self._fields = {}
@@ -48,14 +48,11 @@ class Pattern(object):
 
 
 	def parse_raw_pattern(self, pattern):
-		tmp = "@@@@@" 
-		pattern = re.sub(r"\$\[[\w\d_]+\]\$", tmp, pattern)
-
 		for c in "\\()[]{}+?":
 			pattern = pattern.replace(c, "\\" + c)
 
-		pattern = re.sub(r"\$[\w\d_]+\$", "(%s)"%(num_regex,), pattern)
-		pattern = re.sub(tmp, "(\[[^\]]+\])", pattern)
+		pattern = re.sub("\$[\w\d_]+\$", val_regex, pattern)
+		pattern = re.sub("\$[\w\d_]+:\d+\$", "", pattern)
 		pattern = re.sub(r"%d|%u|%hhu", num_regex, pattern)
 		#pattern = re.sub(r"%f", "-?\d+.\d+", pattern)
 
