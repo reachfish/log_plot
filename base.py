@@ -42,6 +42,9 @@ class Time(object):
 	def get_datetime(self):
 		return datetime.fromtimestamp(self._t)
 
+	def diff_sec(self, other):
+		return self._t - other._t
+
 	def __lt__(self, other):
 		return self._t < other._t
 
@@ -64,6 +67,8 @@ class Time(object):
 		return Time(self._t + sec)
 
 	def __sub__(self, sec):
+		if type(sec) == Time:
+			return self._t - sec._t
 		return Time(self._t - sec)
 
 class Singleton(type):

@@ -41,6 +41,7 @@ if __name__ == "__main__":
 	mgr.load_patterns(config.patterns)
 	mgr.add_value_filter(pattern.Excl0Filter(config.exc_0_fields))
 	mgr.add_post_processer(pattern.StampPostProcesser(config.stamp_type_fields))
+	mgr.add_post_processer(pattern.KeepLastProcesser(config.keep_last_fields))
 
 	
 	def help():

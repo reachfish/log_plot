@@ -34,13 +34,66 @@ class StampPostProcesser(PostProcesser):
 			for d in datas.itervalues():
 				d[1] = [ v - min(d[1]) + 1000 for v in d[1] ]
 
+class KeepLastProcesser(PostProcesser):
+	def process(self, results):
+		for field, datas in results.iteritems():
+			if field not in self._fields:
+				continue
+
+			for uid, data in datas.iteritems():
+				x = []
+				y = []
+				for t, v in zip(data[0], data[1]):
+					if x:
+						last_t = x[len(x) - 1]
+						last_v = y[len(y) - 1]
+						fill_cnt = int(base.Time(t) - base.Time(last_t)) - 1
+						if fill_cnt > 0:
+							x.extend([(base.Time(last_t) + i + 1).get_datetime() for i in xrange(fill_cnt) ])
+							y.extend([ last_v for i in xrange(fill_cnt) ])
+					x.append(t)
+					y.append(v)
+
+				datas[uid] = [x,y]
+
+
+class Field(object):
+	def __init__(self, s, gIdx):
+		if gIdx is not None:
+			self._name = s
+			self._value = None
+			self._index = gIdx
+		else:
+			index = s.find(":")
+			self._name = s[0:index]
+			self._value = int(s[index+1:])
+			self._index = None
+
+	def get_name(self):
+		return self._name
+
+	def get_value(self, groups):
+		if self._value is not None:
+			return self._value
+
+		return eval(groups[self._index])
+
+
 class Pattern(object):
 	def __init__(self, pattern):
 		self._fields = {}
-		lst = re.findall(r"\$\[?([\w\d_]+)\]?\$", pattern)
+		lst = re.findall(r"\$([\w\d_]+)\$", pattern)
 		if lst:
-			self._fields = dict([ (v, i) for i, v in enumerate(lst, 1) ])
-		elif pattern:
+			for i, v in enumerate(lst):
+				field = Field(v, i)
+				self._fields[field.get_name()] = field
+		lst = re.findall(r"\$([\w\d_]+:\d+)\$", pattern)
+		if lst:
+			for v in lst:
+				field = Field(v, None)
+				self._fields[field.get_name()] = field
+
+		if pattern and not self._fields:
 			print "Pattern No Field", pattern
 
 		pattern = self.parse_raw_pattern(pattern)
@@ -69,14 +122,16 @@ class Pattern(object):
 		if not m:
 			return None, None
 
+		values = m.groups()
 		result = {}
-		for field in fields:
-			index = self._fields.get(field, None)
-			if index != None:
-				result[field] = m.group(index)
 
-		_id_idx = self._fields.get("_id", None)
-		_id = m.group(_id_idx) if _id_idx else None
+		for name in fields:
+			field = self._fields.get(name, None)
+			if field is not None:
+				result[name] = field.get_value(values)
+
+		_id_field = self._fields.get("_id", None)
+		_id = _id_field.get_value(values) if _id_field else None
 
 		return result, _id
 
@@ -167,7 +222,6 @@ class PatternManager(object):
 		data = results[field]
 		if not data.get(_id, None):
 			data[_id] = [[],[]]
-		value = eval(value)
 		if type(value) == list:
 			data[_id][0].extend([(t - i + 1).get_datetime() for i in range(len(value), 0, -1)])
 			data[_id][1].extend(value)

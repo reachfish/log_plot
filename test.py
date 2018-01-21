@@ -30,17 +30,21 @@ class TestPattern(unittest.TestCase):
 		test("streamId $_id$, video_rtt $video_rtt$ %d", "streamId {0}, video_rtt {0} {1}".format(pattern.val_regex, pattern.num_regex))
 		test("in $recv$, .* out $pending$", "in {0}, .* out {0}".format(pattern.val_regex))
 
-		self.assertEqual({"_id":1, "video_rtt":2}, pattern.Pattern("streamId $_id$, video_rtt $video_rtt$ ").get_fields())
+		#self.assertEqual({"_id":1, "video_rtt":2}, pattern.Pattern("streamId $_id$, video_rtt $video_rtt$ ").get_fields())
 
 	def test_match(self):
 		p = pattern.Pattern("range $in_range$ total $in_total$ $in_range_count$, distrb $in_dist$ out: range $out_range$")
 		s = "range [232757, 233056] total 299 300, distrb [4, 15, 17] out: range [232774, 232994]"
 		result, _id = p.match(s, ["in_range"])
-		self.assertEqual({"in_range":"[232757, 233056]"}, result)
+		self.assertEqual({"in_range":[232757, 233056]}, result)
 		result, _id = p.match(s, ["in_total"])
-		self.assertEqual({"in_total":"299"}, result)
+		self.assertEqual({"in_total":299}, result)
 		result, _id = p.match(s, ["out_range"])
-		self.assertEqual({"out_range":"[232774, 232994]"}, result)
+		self.assertEqual({"out_range":[232774, 232994]}, result)
+		s = " create audio receiver 12345"
+		p = pattern.Pattern("$audio_status:1$ create audio receiver $_id$")
+		result, _id = p.match(s, ["audio_status"])
+		self.assertEqual({"audio_status":1}, result)
 
 class TestPatternManager(unittest.TestCase):
 
