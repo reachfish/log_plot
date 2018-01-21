@@ -35,6 +35,8 @@ def show_plot(fields, log_files, save_name, incl=None, begin_time=None, end_time
 	plt.savefig(save_name + ".png")
 	plt.show()
 
+	print 'save_file:',  save_name + ".png"
+
 if __name__ == "__main__":
 	import sys
 	import re
