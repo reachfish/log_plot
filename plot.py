@@ -29,13 +29,17 @@ def show_plot(fields, log_files, save_name, incl=None, begin_time=None, end_time
 	for ax, (field, data) in zip(axes, results.items()):
 		ax.set_title(field)
 		ax.xaxis.set_major_formatter(mdates.DateFormatter('%H:%M:%S'))
+		lines = []
 		for _id, (x, y) in data.iteritems():
-			ax.plot(x, y, label=str(_id))
+			line, = ax.plot(x, y, label=str(_id))
+			lines.append(line)
+		ax.legend(handles=lines)
 
-	plt.savefig(save_name + ".png")
+	full_save_name = save_name + ".png"
+	plt.savefig(full_save_name)
 	plt.show()
 
-	print 'save_file:',  save_name + ".png"
+	print 'save_file:',  full_save_name
 
 if __name__ == "__main__":
 	import sys
@@ -45,7 +49,7 @@ if __name__ == "__main__":
 	mgr.load_patterns(config.patterns)
 	mgr.add_value_filter(pattern.Excl0Filter(config.exc_0_fields))
 	mgr.add_post_processer(pattern.StampPostProcesser(config.stamp_type_fields))
-	mgr.add_post_processer(pattern.KeepLastProcesser(config.keep_last_fields))
+	# mgr.add_post_processer(pattern.KeepLastProcesser(config.keep_last_fields))
 
 	
 	def help():
@@ -58,7 +62,7 @@ usage:
 	-f log_file_names  log文件名,可以多个，文件名间用逗号分开
 	-o out_pic_name 输出图片名，默认为out
 	-a 指标，指标间用逗号分开
-	-i include    日志需要包含的内容，可选
+	-i include    过滤包含关键字内容，可选
 	-b begin_time 日志开始时间，格式为 2000-01-01 00:00:00 这样的，可选
 	-e end_time   日志结束时间，可选
 
