@@ -11,6 +11,26 @@ import pattern
 import numpy
 import getopt
 
+class AllocColor(object):
+	_all_colors_ = ['b', 'g', 'r', 'c', 'm', 'y', 'k', ]
+
+	def __init__(self):
+		self._colors = self._all_colors_[:]
+		self._id2color = {}
+
+	def get_color(self, _id):
+		color = self._id2color.get(_id, None)
+		if color or not self._colors:
+			return color
+
+		color = self._colors[0]
+		self._colors.pop(0)
+		self._id2color[_id] = color
+
+		return color
+
+
+
 def show_plot(fields, log_files, save_name, incl=None, begin_time=None, end_time=None):
 	mgr = pattern.PatternManager()
 	results = mgr.match(fields, log_files, incl, begin_time, end_time)
@@ -24,6 +44,7 @@ def show_plot(fields, log_files, save_name, incl=None, begin_time=None, end_time
 	fig.autofmt_xdate()
 	fig.set_size_inches(*inches)
 
+	alloc_color = AllocColor()
 	if type(axes) != numpy.ndarray:
 		axes = (axes,)
 	for ax, (field, data) in zip(axes, results.items()):
@@ -31,7 +52,7 @@ def show_plot(fields, log_files, save_name, incl=None, begin_time=None, end_time
 		ax.xaxis.set_major_formatter(mdates.DateFormatter('%H:%M:%S'))
 		lines = []
 		for _id, (x, y) in data.iteritems():
-			line, = ax.plot(x, y, label=str(_id))
+			line, = ax.plot(x, y, color = alloc_color.get_color(_id), label = str(_id))
 			lines.append(line)
 		ax.legend(handles=lines)
 
@@ -46,7 +67,7 @@ if __name__ == "__main__":
 	import re
 	import config
 	mgr = pattern.PatternManager()
-	mgr.load_patterns(config.patterns)
+	mgr.load_patterns([ p[0] for p in config.patterns])
 	mgr.add_value_filter(pattern.Excl0Filter(config.exc_0_fields))
 	mgr.add_post_processer(pattern.StampPostProcesser(config.stamp_type_fields))
 	# mgr.add_post_processer(pattern.KeepLastProcesser(config.keep_last_fields))
