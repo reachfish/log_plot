@@ -10,7 +10,7 @@ time_fmt = r"(\d+)\-(\d+)\-(\d+) (\d+):(\d+):(\d+)"
 class Time(object):
 
 	def __init__(self, t):
-		if type(t) == float:
+		if type(t) == float or type(t) == int:
 			self._t = t
 		elif type(t) == str:
 			m = re.match(time_fmt, t)
@@ -29,7 +29,7 @@ class Time(object):
 	def parse_time(cls, string):
 		m = re.search(time_fmt, string)
 		if not m:
-			return Time(0)
+			return None
 
 		return Time("{0}-{1}-{2} {3}:{4}:{5}".format(*m.groups()))
 

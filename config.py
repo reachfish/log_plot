@@ -1,6 +1,8 @@
 #!/usr/bin/python
 #coding:utf-8
 
+#配置config.py时， 先阅读 readme.txt
+
 patterns = (
 	#观众音频
 	("$audio_status:2$ create audio receiver $_id$", "音频状态"),
@@ -17,6 +19,11 @@ patterns = (
 	("checkIamSpeaking canspeak:.*,voicepacketnum:$spk_voice_pkt_num$", "主播开麦10s音频包数"),
 
 	#主播视频
+
+	#线程
+	# ("transport thread .* wakeup $transport_wakeup$ times", ""),
+	# ("video decode thread .* wakeup $video_decode_wakeup$ times", ""),
+	("thread .* wakeup $wakeup$ times", ""),
 )
 
 exc_0_fields = (

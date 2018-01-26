@@ -2,8 +2,9 @@
 #coding:utf-8
 
 import os
+import platform
 import matplotlib
-if not os.getenv("DISPLAY", None):
+if platform.platform().find("Linux") !=-1 and not os.getenv("DISPLAY", None):
 	matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
@@ -28,8 +29,6 @@ class AllocColor(object):
 		self._id2color[_id] = color
 
 		return color
-
-
 
 def show_plot(fields, log_files, save_name, incl=None, begin_time=None, end_time=None):
 	mgr = pattern.PatternManager()

@@ -200,6 +200,8 @@ class PatternManager(object):
 		with open(file_name) as f:
 			for line in f:
 				t = base.Time.parse_time(line)
+				if not t:
+					continue
 				if t1 and t < t1:
 					continue
 				if t2 and t > t2:
