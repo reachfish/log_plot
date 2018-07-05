@@ -30,7 +30,11 @@ class AllocColor(object):
 
 		return color
 
-def show_plot(fields, log_files, save_name, incl=None, begin_time=None, end_time=None):
+def show_plot(fields, log_files, save_name, param):
+	incl = param.get("incl", None)
+	begin_time = param.get("begin_time", None)
+	end_time = param.get("end_time", None)
+
 	mgr = pattern.PatternManager()
 	results = mgr.match(fields, log_files, incl, begin_time, end_time)
 	if not results:
@@ -43,15 +47,37 @@ def show_plot(fields, log_files, save_name, incl=None, begin_time=None, end_time
 	fig.autofmt_xdate()
 	fig.set_size_inches(*inches)
 
+	import config
+	if config.use_time and param["scatter"]:
+		xmin = None
+		xmax = None
+		for field, data in results.iteritems():
+			for _id, (x, y) in data.iteritems():
+				if xmin is None:
+					xmin = min(x)
+					xmax = max(x)
+				else:
+					xmin = min(xmin, min(x))
+					xmax = max(xmax, max(x))
+		plt.xlim(xmin, xmax)
+
 	alloc_color = AllocColor()
 	if type(axes) != numpy.ndarray:
 		axes = (axes,)
 	for ax, (field, data) in zip(axes, results.items()):
 		ax.set_title(field)
-		ax.xaxis.set_major_formatter(mdates.DateFormatter('%H:%M:%S'))
+		if config.use_time:
+			ax.xaxis.set_major_formatter(mdates.DateFormatter('%H:%M:%S'))
+		# if xmin is not None:
+			# ax.xlim(xmin, xmax)
 		lines = []
 		for _id, (x, y) in data.iteritems():
-			line, = ax.plot(x, y, color = alloc_color.get_color(_id), label = str(_id))
+			_x = x if config.use_time else range(0, len(y))
+			line = None
+			if param["scatter"]:
+				line = ax.scatter(_x, y, color = alloc_color.get_color(_id), label = str(_id))
+			else:
+				line, = ax.plot(_x, y, color = alloc_color.get_color(_id), label = str(_id))
 			lines.append(line)
 		ax.legend(handles=lines)
 
@@ -63,12 +89,15 @@ def show_plot(fields, log_files, save_name, incl=None, begin_time=None, end_time
 
 if __name__ == "__main__":
 	import sys
+	sys.path.append("/home/yujun/git/log_plot")
+
 	import re
 	import config
 	mgr = pattern.PatternManager()
 	mgr.load_patterns([ p[0] for p in config.patterns])
 	mgr.add_value_filter(pattern.Excl0Filter(config.exc_0_fields))
 	mgr.add_post_processer(pattern.StampPostProcesser(config.stamp_type_fields))
+	mgr.add_post_processer(pattern.WrapProcesser(config.wrap_type_fields))
 	# mgr.add_post_processer(pattern.KeepLastProcesser(config.keep_last_fields))
 
 	
@@ -85,6 +114,8 @@ usage:
 	-i include    过滤包含关键字内容，可选
 	-b begin_time 日志开始时间，格式为 2000-01-01 00:00:00 这样的，可选
 	-e end_time   日志结束时间，可选
+	-n 使用索引号，而不是时间
+	-s 散点图
 
 	python plot.py -f 1.log  -out video_rtt  -a   video_rtt
 	python plot.py -f 1.log  -a video_rtt,video_decode  -b "2018-01-20 10:00:00"
@@ -99,7 +130,7 @@ support fields:
 			print i, "  ".join(fields)
 
 	try: 
-		opts,args = getopt.getopt(sys.argv[1:], "f:o:a:i:b:e", [])
+		opts,args = getopt.getopt(sys.argv[1:], "f:o:a:i:b:e:n:s", [])
 	except getopt.GetoptError:
 		help()
 		exit()
@@ -110,9 +141,14 @@ support fields:
 	begin_time = ""
 	end_time = ""
 	include = ""
+	scatter = False
 
 	p = re.compile(r"[;,\s]\s*")
 	for o, a in opts:
+		if o == "-n":
+			config.use_time = False
+		elif o == "-s":
+			scatter = True
 		if not a: continue
 		if o == "-f":
 			log_file_names = p.split(a)
@@ -139,5 +175,11 @@ support fields:
 		print "请输入查看指标 -a"
 		exit()
 
-	show_plot(fields, log_file_names, out_pic_name, include, begin_time, end_time)
+	param = {}
+	param["incl"] = include
+	param["begin_time"] = begin_time
+	param["end_time"] = end_time
+	param["scatter"] = scatter
+
+	show_plot(fields, log_file_names, out_pic_name, param)
 

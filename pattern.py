@@ -34,6 +34,18 @@ class StampPostProcesser(PostProcesser):
 			for d in datas.itervalues():
 				d[1] = [ v - min(d[1]) + 1000 for v in d[1] ]
 
+class WrapProcesser(PostProcesser):
+	def process(self, results):
+		for field, datas in results.iteritems():
+			if field not in self._fields:
+				continue
+
+			target = 4294967000
+			max_target = 4294967295
+			for d in datas.itervalues():
+				if max(d[1]) - min(d[1]) >= target:
+					d[1] = [ v - target if v >= target else v + wrap for v in d[1] ]
+
 class KeepLastProcesser(PostProcesser):
 	def process(self, results):
 		for field, datas in results.iteritems():
@@ -58,6 +70,8 @@ class KeepLastProcesser(PostProcesser):
 
 
 class Field(object):
+	_idx_map = {}
+	_next_idx = 1
 	def __init__(self, s, gIdx):
 		if gIdx is not None:
 			self._name = s
@@ -65,18 +79,33 @@ class Field(object):
 			self._index = gIdx
 		else:
 			index = s.find(":")
-			self._name = s[0:index]
-			self._value = int(s[index+1:])
 			self._index = None
+			self._name = s[0:index]
+			self._value = s[index+1:]
+			if self._value not in ("idx", ):
+				self._value = int(self._value)
+
 
 	def get_name(self):
 		return self._name
 
-	def get_value(self, groups):
+	def get_value(self, groups, _id=None):
 		if self._value is not None:
+			if self._value == "idx":
+				idx = Field._idx_map.get(_id, None)
+				if not idx:
+					idx = Field._next_idx
+					Field._idx_map[_id] = idx
+					Field._next_idx += 1
+				return idx
 			return self._value
 
-		return eval(groups[self._index])
+		value = groups[self._index]
+
+		if self._name == "_id":
+			return value
+		else:
+			eval(value)
 
 
 class Pattern(object):
@@ -87,7 +116,7 @@ class Pattern(object):
 			for i, v in enumerate(lst):
 				field = Field(v, i)
 				self._fields[field.get_name()] = field
-		lst = re.findall(r"\$([\w\d_]+:\d+)\$", pattern)
+		lst = re.findall(r"\$([\w\d_]+:[\w\d_]+)\$", pattern)
 		if lst:
 			for v in lst:
 				field = Field(v, None)
@@ -104,8 +133,9 @@ class Pattern(object):
 		for c in "\\()[]{}+?":
 			pattern = pattern.replace(c, "\\" + c)
 
+		pattern = re.sub("\$_id\$", "([\w\d_]+)", pattern) #_id可以是普通字符串
 		pattern = re.sub("\$[\w\d_]+\$", val_regex, pattern)
-		pattern = re.sub("\$[\w\d_]+:\d+\$", "", pattern)
+		pattern = re.sub("\$[\w\d_]+:[\w\d_]+\$", "", pattern)
 		pattern = re.sub(r"%d|%u|%hhu", num_regex, pattern)
 		#pattern = re.sub(r"%f", "-?\d+.\d+", pattern)
 
@@ -125,13 +155,13 @@ class Pattern(object):
 		values = m.groups()
 		result = {}
 
+		_id_field = self._fields.get("_id", None)
+		_id = _id_field.get_value(values) if _id_field else None
+
 		for name in fields:
 			field = self._fields.get(name, None)
 			if field is not None:
-				result[name] = field.get_value(values)
-
-		_id_field = self._fields.get("_id", None)
-		_id = _id_field.get_value(values) if _id_field else None
+				result[name] = field.get_value(values, _id)
 
 		return result, _id
 
@@ -184,6 +214,7 @@ class PatternManager(object):
 			if not self._fields.get(field, None):
 				exclude.append(field)
 				continue
+
 			for pattern in self._fields[field]:
 				if not pattern in patterns:
 					patterns.append(pattern)
@@ -197,14 +228,15 @@ class PatternManager(object):
 		t1 = base.Time(begin_time) if begin_time else None
 		t2 = base.Time(end_time) if end_time else None
 		pat = re.compile(incl) if incl else None
+		import config
 		with open(file_name) as f:
 			for line in f:
 				t = base.Time.parse_time(line)
-				if not t:
+				if not t and config.use_time:
 					continue
-				if t1 and t < t1:
+				if t and t1 and t < t1:
 					continue
-				if t2 and t > t2:
+				if t and t2 and t > t2:
 					break
 				if pat and not pat.search(line):
 					continue
@@ -216,7 +248,7 @@ class PatternManager(object):
 					if _id is None:
 						_id = "$_id"
 					for field, value in result.iteritems():
-						self._put_field(field, _id, t, value, results)
+						self._put_field(field, _id, t or base.Time(0), value, results)
 
 	def _put_field(self, field, _id, t, value, results):
 		if not results.get(field):

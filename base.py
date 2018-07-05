@@ -27,7 +27,7 @@ class Time(object):
 
 	@classmethod
 	def parse_time(cls, string):
-		m = re.search(time_fmt, string)
+		m = re.search("^" + time_fmt, string)
 		if not m:
 			return None
 
